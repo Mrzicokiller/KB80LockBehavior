@@ -1,10 +1,18 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Runtime.InteropServices;
 
 namespace LockConsole
 {
     class Program
     {
+        [DllImport("User32.dll")]
+        private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+        internal struct LASTINPUTINFO
+        {
+            public uint cbSize;
+            public uint dwTime;
+        }
         static bool isLocked { get; set; } = false;
         static bool isInActive { get; set; } = false;
         static DateTime lastActivity { get; set; } = DateTime.Now;
@@ -14,6 +22,13 @@ namespace LockConsole
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
             Console.WriteLine("Hello World!");
+
+            LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
+            lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
+            GetLastInputInfo(ref lastInputInfo);
+
+            var lastInput = DateTime.Now.AddMilliseconds(-(Environment.TickCount - lastInputInfo.dwTime));
+
             do
             {
                 keyInput = Console.ReadKey();
