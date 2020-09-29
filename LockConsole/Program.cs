@@ -7,18 +7,18 @@ namespace LockConsole
     {
         static bool isLocked { get; set; } = false;
         static bool isInActive { get; set; } = false;
+        static DateTime lastActivity { get; set; } = DateTime.Now;
         static void Main(string[] args)
         {
             ConsoleKeyInfo keyInput;
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
+
             Console.WriteLine("Hello World!");
             do
             {
                 keyInput = Console.ReadKey();
                 Console.WriteLine("Checking for ESC");
             } while (keyInput.Key != ConsoleKey.Escape);
-
-            
 
         }
 
@@ -38,12 +38,4 @@ namespace LockConsole
         }
 
     }
-    /*
-     Test code:
-     for(int i = 0; i < 10; i++)
-     {
-        Console.WriteLine("Boolean isLocked: " + isLocked);
-        Thread.Sleep(500);
-     }
-     */
 }
