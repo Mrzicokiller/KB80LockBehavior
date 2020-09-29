@@ -11,7 +11,13 @@ namespace LockConsole
         {
             Console.WriteLine("Hello World!");
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
-            Console.ReadLine();
+            var key = Console.ReadKey();
+            while(key.Key != ConsoleKey.Escape)
+            if (key.Key == ConsoleKey.Escape)
+            {
+                Environment.Exit(0);
+            }
+
         }
 
         // Observer: When a SystemEvent.SessionSwitch is fired checks if SessionLock event is fired
