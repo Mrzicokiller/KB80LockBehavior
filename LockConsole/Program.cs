@@ -9,14 +9,16 @@ namespace LockConsole
         static bool isInActive { get; set; } = false;
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            ConsoleKeyInfo keyInput;
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
-            var key = Console.ReadKey();
-            while(key.Key != ConsoleKey.Escape)
-            if (key.Key == ConsoleKey.Escape)
+            Console.WriteLine("Hello World!");
+            do
             {
-                Environment.Exit(0);
-            }
+                keyInput = Console.ReadKey();
+                Console.WriteLine("Checking for ESC");
+            } while (keyInput.Key != ConsoleKey.Escape);
+
+            
 
         }
 
