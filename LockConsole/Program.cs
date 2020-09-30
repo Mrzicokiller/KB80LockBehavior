@@ -28,9 +28,10 @@ namespace LockConsole
             do
             {
                 GetInactivityTime();
-                Console.WriteLine("last activity: " + lastActivity);
-                Console.WriteLine("last activity with treshold: " + lastActivityWithThreshold);
+                //Console.WriteLine("last activity: " + lastActivity);
+                //Console.WriteLine("last activity with treshold: " + lastActivityWithThreshold);
                 CheckInactivityThreshold();
+                CheckMic();
 
                 /*keyInput = Console.ReadKey();
                 Console.WriteLine("Checking for ESC");
@@ -85,6 +86,22 @@ namespace LockConsole
             else
             {
                 isInactiveAfterThreshold = false;
+            }
+        }
+
+        static void CheckMic()
+        {
+            using (var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            using (var key = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\"))
+            {
+                if (key == null)
+                {
+                    Console.WriteLine("mic notactive");
+                }
+                else
+                {
+                    Console.WriteLine("mic active");
+                }
             }
         }
 
