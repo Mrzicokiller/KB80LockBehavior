@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace LockConsole
 {
@@ -16,24 +17,30 @@ namespace LockConsole
         static bool isLocked { get; set; } = false;
         static bool isInActive { get; set; } = false;
         static DateTime lastActivity { get; set; } = DateTime.Now;
+        static DateTime currentTime = DateTime.Now;
         static void Main(string[] args)
         {
-            ConsoleKeyInfo keyInput;
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
-
+            
             Console.WriteLine("Hello World!");
-
-            LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
-            lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
-            GetLastInputInfo(ref lastInputInfo);
-
-            var lastInput = DateTime.Now.AddMilliseconds(-(Environment.TickCount - lastInputInfo.dwTime));
 
             do
             {
-                keyInput = Console.ReadKey();
+                CheckInActivity();
+                Console.WriteLine(lastActivity);
+
+                /*keyInput = Console.ReadKey();
                 Console.WriteLine("Checking for ESC");
-            } while (keyInput.Key != ConsoleKey.Escape);
+                if (keyInput.Key == ConsoleKey.Escape)
+                {
+                    Environment.Exit(0);
+                }*/
+
+                currentTime = DateTime.Now;
+                Thread.Sleep(2000);
+            } while (currentTime < DateTime.Parse("14:21:00"));
+            
+
 
         }
 
@@ -49,6 +56,18 @@ namespace LockConsole
             {
                 Console.WriteLine("unlocked");
                 isLocked = false;
+            }
+        }
+
+        static void CheckInActivity()
+        {
+            LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
+            lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
+            GetLastInputInfo(ref lastInputInfo);
+            DateTime fetchedTime = DateTime.Now.AddMilliseconds(-(Environment.TickCount - lastInputInfo.dwTime));
+            if(lastActivity != fetchedTime)
+            {
+                lastActivity = fetchedTime;
             }
         }
 
