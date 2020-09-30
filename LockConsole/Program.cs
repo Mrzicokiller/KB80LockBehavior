@@ -17,6 +17,7 @@ namespace LockConsole
         static bool isLocked { get; set; } = false;
         static bool isInActive { get; set; } = false;
         static DateTime lastActivity { get; set; } = DateTime.Now;
+        static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
         static void Main(string[] args)
         {
@@ -26,8 +27,10 @@ namespace LockConsole
 
             do
             {
-                CheckInActivity();
-                Console.WriteLine(lastActivity);
+                GetInactivityTime();
+                Console.WriteLine("last activity: " + lastActivity);
+                Console.WriteLine("last activity with treshold: " + lastActivityWithThreshold);
+                CheckInactivityThreshold();
 
                 /*keyInput = Console.ReadKey();
                 Console.WriteLine("Checking for ESC");
@@ -38,7 +41,7 @@ namespace LockConsole
 
                 currentTime = DateTime.Now;
                 Thread.Sleep(2000);
-            } while (currentTime < DateTime.Parse("14:21:00"));
+            } while (currentTime < DateTime.Parse("18:00:00"));
             
 
 
@@ -59,7 +62,7 @@ namespace LockConsole
             }
         }
 
-        static void CheckInActivity()
+        static void GetInactivityTime()
         {
             LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
@@ -68,6 +71,15 @@ namespace LockConsole
             if(lastActivity != fetchedTime)
             {
                 lastActivity = fetchedTime;
+                lastActivityWithThreshold = fetchedTime.Add(new TimeSpan(00,01,00));
+            }
+        }
+
+        static void CheckInactivityThreshold()
+        {
+            if(lastActivityWithThreshold < DateTime.Now)
+            {
+                Console.WriteLine("Threshold has been past");
             }
         }
 
