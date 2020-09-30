@@ -15,7 +15,7 @@ namespace LockConsole
             public uint dwTime;
         }
         static bool isLocked { get; set; } = false;
-        static bool isInActive { get; set; } = false;
+        static bool isInactiveAfterThreshold { get; set; } = false;
         static DateTime lastActivity { get; set; } = DateTime.Now;
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
@@ -80,6 +80,11 @@ namespace LockConsole
             if(lastActivityWithThreshold < DateTime.Now)
             {
                 Console.WriteLine("Threshold has been past");
+                isInactiveAfterThreshold = true;
+            }
+            else
+            {
+                isInactiveAfterThreshold = false;
             }
         }
 
