@@ -22,7 +22,7 @@ namespace LockConsole
         static void Main(string[] args)
         {
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
-            
+
             Console.WriteLine("Hello World!");
 
             do
@@ -31,7 +31,6 @@ namespace LockConsole
                 //Console.WriteLine("last activity: " + lastActivity);
                 //Console.WriteLine("last activity with treshold: " + lastActivityWithThreshold);
                 CheckInactivityThreshold();
-                CheckMic();
 
                 /*keyInput = Console.ReadKey();
                 Console.WriteLine("Checking for ESC");
@@ -63,6 +62,7 @@ namespace LockConsole
             }
         }
 
+        // Get last input timestamp and set in global variable and threshold time
         static void GetInactivityTime()
         {
             LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
@@ -76,6 +76,7 @@ namespace LockConsole
             }
         }
 
+        // Check if set threshold has been past and create http request or write in log of http is not posible
         static void CheckInactivityThreshold()
         {
             if(lastActivityWithThreshold < DateTime.Now)
@@ -86,22 +87,6 @@ namespace LockConsole
             else
             {
                 isInactiveAfterThreshold = false;
-            }
-        }
-
-        static void CheckMic()
-        {
-            using (var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
-            using (var key = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\"))
-            {
-                if (key == null)
-                {
-                    Console.WriteLine("mic notactive");
-                }
-                else
-                {
-                    Console.WriteLine("mic active");
-                }
             }
         }
 
