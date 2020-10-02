@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -24,6 +25,8 @@ namespace LockConsole
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
             Console.WriteLine("Hello World!");
+            writeToLog(DateTime.Now, "Test message 2");
+            readLogFile("2-10-2020.txt");
 
             do
             {
@@ -88,6 +91,82 @@ namespace LockConsole
             {
                 isInactiveAfterThreshold = false;
             }
+        }
+
+        /// <summary>
+        /// Write message to correct file
+        /// </summary>
+        /// <param name="logFileDate">The date of the day (file date name)</param>
+        /// <param name="message">The message that needs to be written to the file</param>
+        static void writeToLog(DateTime logFileDate, string message)
+        {
+            string fileName = logFileDate.ToShortDateString() + ".txt";
+            if(checkIfLogExcists(fileName))
+            {
+                using (StreamWriter file = new StreamWriter(fileName, true))
+                {
+                    file.WriteLine(message);
+                }
+            }
+            else
+            {
+                if (createLogFile(fileName))
+                {
+                    Console.WriteLine("file succesfull created");
+                }
+                else
+                {
+                    Console.WriteLine("file not created");
+                }
+            }
+
+            //Console.WriteLine("FileName: " + fileName);
+            //Console.WriteLine("Message: " + message);
+
+        }
+
+        /// <summary>
+        /// Read data from given filename
+        /// </summary>
+        /// <param name="fileName">The name of the file that needs to be read</param>
+        static void readLogFile(string fileName)
+        {
+            string[] fileData = File.ReadAllLines(fileName);
+            foreach(string dataLine in fileData)
+            {
+                Console.WriteLine(dataLine);
+            }
+        }
+
+        /// <summary>
+        /// Create the log file
+        /// </summary>
+        /// <param name="fileName">The name of the file that needs to be created</param>
+        /// <returns></returns>
+        static bool createLogFile(string fileName)
+        {
+            File.Create(fileName);
+            return (checkIfLogExcists(fileName));
+        }
+
+        /// <summary>
+        /// Check if log already excits
+        /// </summary>
+        /// <param name="fileName">The fileName of the log file that needs to be checked</param>
+        static bool checkIfLogExcists(string fileName)
+        {
+            Console.WriteLine(fileName);
+            if (File.Exists(fileName))
+            {
+                Console.WriteLine("found");
+                return true;
+            }
+            else
+            {
+                Console.WriteLine("not found");
+                return false;
+            }
+
         }
 
     }
