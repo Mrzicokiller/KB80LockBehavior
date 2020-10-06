@@ -28,7 +28,8 @@ namespace LockConsole
                 recordID = 1,
                 timeStamp = DateTime.Now,
                 locked = true,
-                message = "Test message 5"
+                message = "Test message 5",
+                APISucces = false
             };
         static void Main(string[] args)
         {
@@ -109,30 +110,10 @@ namespace LockConsole
         /// <param name="dataMessage">the dataMessage object</param>
         static void writeToLog(DataMessage dataMessage)
         {
-            string fileName = dataMessage.timeStamp.ToShortDateString() + ".json";
             if (!logMessages.Contains(dataMessage))
             {
                 logMessages.Add(dataMessage);
-            }
-
-            if (!checkIfLogExcists(fileName))
-            {
-                if (createLogFile(fileName))
-                {
-                    Console.WriteLine("file succesfull created");
-                }
-                else
-                {
-                    throw new IOException("file not created");
-                }
-                
-            }
-
-            using (StreamWriter file = new StreamWriter(fileName, false))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Serialize(file, logMessages);
-
+                updateEventLog();
             }
 
         }
@@ -143,22 +124,32 @@ namespace LockConsole
         /// <param name="fileName">The name of the file that needs to be read</param>
         static void readLogFile(string fileName)
         {
+            List<DataMessage> dataMessages;
+
             using (StreamReader reader = new StreamReader(fileName))
             {
                 string json = reader.ReadToEnd();
-                List<DataMessage> items = JsonConvert.DeserializeObject<List<DataMessage>>(json);
+                dataMessages = JsonConvert.DeserializeObject<List<DataMessage>>(json);
             }
+
+            dataMessages.ForEach(delegate(DataMessage dataMessage){
+                Console.WriteLine(dataMessage.message);
+            });
 
         }
 
         /// <summary>
         /// Removes the given line from the given file
         /// </summary>
-        /// <param name="fileName">The name of the files that needs to edited</param>
-        /// <param name="dataLine">The line that needs to be removed</param>
-        static void removeLineFromLog(string fileName, string dataLine)
+        /// <param name="message">The dataMessage that needs to be removed</param>
+        static void removeLineFromLog(DataMessage dataMessage)
         {
-            //I dont know how the fuck I need the todo this
+            if (logMessages.Contains(dataMessage))
+            {
+                logMessages.Remove(dataMessage);
+                updateEventLog();
+            }
+
         }
 
         /// <summary>
@@ -190,6 +181,33 @@ namespace LockConsole
                 return false;
             }
 
+        }
+
+        /// <summary>
+        /// Updates the logfile with the logMessages list
+        /// </summary>
+        static void updateEventLog()
+        {
+            string fileName = DateTime.Now.ToShortDateString() + ".json";
+            if (!checkIfLogExcists(fileName))
+            {
+                if (createLogFile(fileName))
+                {
+                    Console.WriteLine("file succesfull created");
+                }
+                else
+                {
+                    throw new IOException("file not created");
+                }
+
+            }
+
+            using (StreamWriter file = new StreamWriter(fileName, false))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(file, logMessages);
+
+            }
         }
 
     }
