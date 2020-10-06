@@ -3,6 +3,8 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace LockConsole
 {
@@ -20,13 +22,21 @@ namespace LockConsole
         static DateTime lastActivity { get; set; } = DateTime.Now;
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
+        static List<DataMessage> logMessages = new List<DataMessage>();
+        static DataMessage testMessage = new DataMessage
+            {
+                recordID = 1,
+                timeStamp = DateTime.Now,
+                locked = true,
+                message = "Test message 5"
+            };
         static void Main(string[] args)
         {
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
             Console.WriteLine("Hello World!");
-            writeToLog(DateTime.Now, "Test message 2");
-            readLogFile("2-10-2020.txt");
+            writeToLog(testMessage);
+            readLogFile("6-10-2020.json");
 
             do
             {
@@ -45,7 +55,7 @@ namespace LockConsole
                 currentTime = DateTime.Now;
                 Thread.Sleep(2000);
             } while (currentTime < DateTime.Parse("18:00:00"));
-            
+
 
 
         }
@@ -72,17 +82,17 @@ namespace LockConsole
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
             GetLastInputInfo(ref lastInputInfo);
             DateTime fetchedTime = DateTime.Now.AddMilliseconds(-(Environment.TickCount - lastInputInfo.dwTime));
-            if(lastActivity != fetchedTime)
+            if (lastActivity != fetchedTime)
             {
                 lastActivity = fetchedTime;
-                lastActivityWithThreshold = fetchedTime.Add(new TimeSpan(00,01,00));
+                lastActivityWithThreshold = fetchedTime.Add(new TimeSpan(00, 01, 00));
             }
         }
 
         // Check if set threshold has been past and create http request or write in log of http is not posible
         static void CheckInactivityThreshold()
         {
-            if(lastActivityWithThreshold < DateTime.Now)
+            if (lastActivityWithThreshold < DateTime.Now)
             {
                 Console.WriteLine("Threshold has been past");
                 isInactiveAfterThreshold = true;
@@ -94,21 +104,18 @@ namespace LockConsole
         }
 
         /// <summary>
-        /// Write message to correct file
+        /// Writes message to file
         /// </summary>
-        /// <param name="logFileDate">The date of the day (file date name)</param>
-        /// <param name="message">The message that needs to be written to the file</param>
-        static void writeToLog(DateTime logFileDate, string message)
+        /// <param name="dataMessage">the dataMessage object</param>
+        static void writeToLog(DataMessage dataMessage)
         {
-            string fileName = logFileDate.ToShortDateString() + ".txt";
-            if(checkIfLogExcists(fileName))
+            string fileName = dataMessage.timeStamp.ToShortDateString() + ".json";
+            if (!logMessages.Contains(dataMessage))
             {
-                using (StreamWriter file = new StreamWriter(fileName, true))
-                {
-                    file.WriteLine(message);
-                }
+                logMessages.Add(dataMessage);
             }
-            else
+
+            if (!checkIfLogExcists(fileName))
             {
                 if (createLogFile(fileName))
                 {
@@ -116,12 +123,17 @@ namespace LockConsole
                 }
                 else
                 {
-                    Console.WriteLine("file not created");
+                    throw new IOException("file not created");
                 }
+                
             }
 
-            //Console.WriteLine("FileName: " + fileName);
-            //Console.WriteLine("Message: " + message);
+            using (StreamWriter file = new StreamWriter(fileName, false))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(file, logMessages);
+
+            }
 
         }
 
@@ -131,11 +143,22 @@ namespace LockConsole
         /// <param name="fileName">The name of the file that needs to be read</param>
         static void readLogFile(string fileName)
         {
-            string[] fileData = File.ReadAllLines(fileName);
-            foreach(string dataLine in fileData)
+            using (StreamReader reader = new StreamReader(fileName))
             {
-                Console.WriteLine(dataLine);
+                string json = reader.ReadToEnd();
+                List<DataMessage> items = JsonConvert.DeserializeObject<List<DataMessage>>(json);
             }
+
+        }
+
+        /// <summary>
+        /// Removes the given line from the given file
+        /// </summary>
+        /// <param name="fileName">The name of the files that needs to edited</param>
+        /// <param name="dataLine">The line that needs to be removed</param>
+        static void removeLineFromLog(string fileName, string dataLine)
+        {
+            //I dont know how the fuck I need the todo this
         }
 
         /// <summary>
@@ -170,4 +193,14 @@ namespace LockConsole
         }
 
     }
+
+    public class DataMessage
+    {
+        public int recordID { get; set; }
+        public DateTime timeStamp { get; set; }
+        public bool locked { get; set; }
+        public string message { get; set; }
+        public bool APISucces { get; set; }
+    }
+
 }
