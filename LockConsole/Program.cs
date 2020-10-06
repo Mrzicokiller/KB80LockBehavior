@@ -22,22 +22,33 @@ namespace LockConsole
         static DateTime lastActivity { get; set; } = DateTime.Now;
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
-        static List<DataMessage> logMessages = new List<DataMessage>();
+        static List<DataMessage> logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
         static DataMessage testMessage = new DataMessage
             {
                 recordID = 1,
                 timeStamp = DateTime.Now,
                 locked = true,
-                message = "Test message 5",
+                message = "Test message 6",
                 APISucces = false
             };
+        static DataMessage testMessage2 = new DataMessage
+        {
+            recordID = 1,
+            timeStamp = DateTime.Now,
+            locked = true,
+            message = "Test message 7",
+            APISucces = false
+        };
         static void Main(string[] args)
         {
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
             Console.WriteLine("Hello World!");
             writeToLog(testMessage);
-            readLogFile("6-10-2020.json");
+            writeToLog(testMessage2);
+            readLogFile(DateTime.Now.ToShortDateString() + ".json");
+            removeLineFromLog(testMessage2);
+            readLogFile(DateTime.Now.ToShortDateString() + ".json");
 
             do
             {
@@ -208,6 +219,18 @@ namespace LockConsole
                 serializer.Serialize(file, logMessages);
 
             }
+        }
+
+        static DataMessage createMessage(DateTime timeStamp, bool isLocked, string message, bool APISucces)
+        {
+            return new DataMessage
+            {
+                recordID = 0,
+                timeStamp = timeStamp,
+                locked = isLocked,
+                message = message,
+                APISucces = APISucces
+            };
         }
 
     }
