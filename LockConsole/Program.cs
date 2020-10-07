@@ -22,39 +22,19 @@ namespace LockConsole
         static DateTime lastActivity { get; set; } = DateTime.Now;
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
-        static List<DataMessage> logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
-        static DataMessage testMessage = new DataMessage
-            {
-                recordID = 1,
-                timeStamp = DateTime.Now,
-                locked = true,
-                message = "Test message 6",
-                APISucces = false
-            };
-        static DataMessage testMessage2 = new DataMessage
-        {
-            recordID = 1,
-            timeStamp = DateTime.Now,
-            locked = true,
-            message = "Test message 7",
-            APISucces = false
-        };
+        static List<DataMessage> logMessages { get; set; }
+
         static void Main(string[] args)
         {
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
+            createLogFile(DateTime.Now.ToShortDateString() + ".json");
+            logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
 
             Console.WriteLine("Hello World!");
-            writeToLog(testMessage);
-            writeToLog(testMessage2);
-            readLogFile(DateTime.Now.ToShortDateString() + ".json");
-            removeLineFromLog(testMessage2);
-            readLogFile(DateTime.Now.ToShortDateString() + ".json");
 
             do
             {
                 GetInactivityTime();
-                //Console.WriteLine("last activity: " + lastActivity);
-                //Console.WriteLine("last activity with treshold: " + lastActivityWithThreshold);
                 CheckInactivityThreshold();
 
                 /*keyInput = Console.ReadKey();
@@ -221,13 +201,13 @@ namespace LockConsole
             }
         }
 
-        static DataMessage createMessage(DateTime timeStamp, bool isLocked, string message, bool APISucces)
+        static DataMessage createMessage(DateTime timeStamp, bool isLocked, string location, string message, bool APISucces)
         {
             return new DataMessage
             {
-                recordID = 0,
                 timeStamp = timeStamp,
                 locked = isLocked,
+                location = location,
                 message = message,
                 APISucces = APISucces
             };
@@ -237,9 +217,10 @@ namespace LockConsole
 
     public class DataMessage
     {
-        public int recordID { get; set; }
+        //public int recordID { get; set; }
         public DateTime timeStamp { get; set; }
         public bool locked { get; set; }
+        public string location { get; set; }
         public string message { get; set; }
         public bool APISucces { get; set; }
     }
