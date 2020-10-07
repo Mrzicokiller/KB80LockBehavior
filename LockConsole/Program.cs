@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
 
 namespace LockConsole
 {
@@ -19,16 +21,23 @@ namespace LockConsole
         }
         static bool isLocked { get; set; } = false;
         static bool isInactiveAfterThreshold { get; set; } = false;
-        static DateTime lastActivity { get; set; } = DateTime.Now;
+        static DateTime lastActivity { get; set; }
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
-        static List<DataMessage> logMessages { get; set; }
+        static List<DataMessage> logMessages { get; set; } = new List<DataMessage>();
 
         static void Main(string[] args)
         {
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
-            createLogFile(DateTime.Now.ToShortDateString() + ".json");
-            logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
+            if(checkIfLogExcists(DateTime.Now.ToShortDateString() + ".json"))
+            {
+                if(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")) != null)
+                {
+                    logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
+                }
+            }
+
+            syncLogWithAPI();
 
             Console.WriteLine("Hello World!");
 
@@ -74,19 +83,24 @@ namespace LockConsole
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
             GetLastInputInfo(ref lastInputInfo);
             DateTime fetchedTime = DateTime.Now.AddMilliseconds(-(Environment.TickCount - lastInputInfo.dwTime));
-            if (lastActivity != fetchedTime)
+            if (DateTime.Compare(lastActivity, fetchedTime) < 0)
             {
+                Console.WriteLine("Change time");
                 lastActivity = fetchedTime;
                 lastActivityWithThreshold = fetchedTime.Add(new TimeSpan(00, 01, 00));
+                isInactiveAfterThreshold = false;
             }
         }
 
         // Check if set threshold has been past and create http request or write in log of http is not posible
         static void CheckInactivityThreshold()
         {
-            if (lastActivityWithThreshold < DateTime.Now)
+            if (DateTime.Compare(lastActivityWithThreshold, DateTime.Now) < 0)
             {
-                Console.WriteLine("Threshold has been past");
+                if(isInactiveAfterThreshold != true)
+                {
+                    writeToLog(createMessage(DateTime.Now, isLocked, "settings", "threshold has been past", false));
+                }
                 isInactiveAfterThreshold = true;
             }
             else
@@ -101,7 +115,7 @@ namespace LockConsole
         /// <param name="dataMessage">the dataMessage object</param>
         static void writeToLog(DataMessage dataMessage)
         {
-            if (!logMessages.Contains(dataMessage))
+            if (logMessages == null || !logMessages.Contains(dataMessage))
             {
                 logMessages.Add(dataMessage);
                 updateEventLog();
@@ -150,7 +164,7 @@ namespace LockConsole
         /// <returns></returns>
         static bool createLogFile(string fileName)
         {
-            File.Create(fileName);
+            File.Create(fileName).Close();
             return (checkIfLogExcists(fileName));
         }
 
@@ -198,6 +212,18 @@ namespace LockConsole
                 JsonSerializer serializer = new JsonSerializer();
                 serializer.Serialize(file, logMessages);
 
+            }
+        }
+
+        static void syncLogWithAPI()
+        {
+            Console.WriteLine("posting...");
+            using (var client = new HttpClient())
+            {
+                string url = "https://postb.in/1602089557334-5706080507952";
+                var data = createMessage(DateTime.Now, false, "home", "test message", true);
+                var response = client.PostAsJsonAsync(url, data).Result;
+                Console.WriteLine(response);
             }
         }
 
