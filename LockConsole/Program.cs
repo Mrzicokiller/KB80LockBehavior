@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
 
 namespace LockConsole
 {
@@ -19,16 +21,25 @@ namespace LockConsole
         }
         static bool isLocked { get; set; } = false;
         static bool isInactiveAfterThreshold { get; set; } = false;
-        static DateTime lastActivity { get; set; } = DateTime.Now;
+        static DateTime lastActivity { get; set; }
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
-        static List<DataMessage> logMessages { get; set; }
+        static List<DataMessage> logMessages { get; set; } = new List<DataMessage>();
 
         static void Main(string[] args)
         {
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
-            createLogFile(DateTime.Now.ToShortDateString() + ".json");
-            logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
+            if(checkIfLogExcists(DateTime.Now.ToShortDateString() + ".json"))
+            {
+                if(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")) != null)
+                {
+                    logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
+                }
+            }
+            else
+            {
+                createLogFile(DateTime.Now.ToShortDateString() + ".json");
+            }
 
             Console.WriteLine("Hello World!");
 
@@ -45,6 +56,7 @@ namespace LockConsole
                 }*/
 
                 currentTime = DateTime.Now;
+                syncLogWithAPI();
                 Thread.Sleep(2000);
             } while (currentTime < DateTime.Parse("18:00:00"));
 
@@ -74,19 +86,24 @@ namespace LockConsole
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
             GetLastInputInfo(ref lastInputInfo);
             DateTime fetchedTime = DateTime.Now.AddMilliseconds(-(Environment.TickCount - lastInputInfo.dwTime));
-            if (lastActivity != fetchedTime)
+            if (DateTime.Compare(lastActivity, fetchedTime) < 0)
             {
+                Console.WriteLine("Change time");
                 lastActivity = fetchedTime;
                 lastActivityWithThreshold = fetchedTime.Add(new TimeSpan(00, 01, 00));
+                isInactiveAfterThreshold = false;
             }
         }
 
         // Check if set threshold has been past and create http request or write in log of http is not posible
         static void CheckInactivityThreshold()
         {
-            if (lastActivityWithThreshold < DateTime.Now)
+            if (DateTime.Compare(lastActivityWithThreshold, DateTime.Now) < 0)
             {
-                Console.WriteLine("Threshold has been past");
+                if(isInactiveAfterThreshold != true)
+                {
+                    writeToLog(createMessage(DateTime.Now, isLocked, "settings", "threshold has been past", false));
+                }
                 isInactiveAfterThreshold = true;
             }
             else
@@ -101,7 +118,7 @@ namespace LockConsole
         /// <param name="dataMessage">the dataMessage object</param>
         static void writeToLog(DataMessage dataMessage)
         {
-            if (!logMessages.Contains(dataMessage))
+            if (logMessages == null || !logMessages.Contains(dataMessage))
             {
                 logMessages.Add(dataMessage);
                 updateEventLog();
@@ -113,7 +130,7 @@ namespace LockConsole
         /// Read data from given filename
         /// </summary>
         /// <param name="fileName">The name of the file that needs to be read</param>
-        static void readLogFile(string fileName)
+        static List<DataMessage> readLogFile(string fileName)
         {
             List<DataMessage> dataMessages;
 
@@ -123,23 +140,11 @@ namespace LockConsole
                 dataMessages = JsonConvert.DeserializeObject<List<DataMessage>>(json);
             }
 
-            dataMessages.ForEach(delegate(DataMessage dataMessage){
-                Console.WriteLine(dataMessage.message);
-            });
+            return dataMessages;
 
-        }
-
-        /// <summary>
-        /// Removes the given line from the given file
-        /// </summary>
-        /// <param name="message">The dataMessage that needs to be removed</param>
-        static void removeLineFromLog(DataMessage dataMessage)
-        {
-            if (logMessages.Contains(dataMessage))
-            {
-                logMessages.Remove(dataMessage);
-                updateEventLog();
-            }
+            //dataMessages.ForEach(delegate(DataMessage dataMessage){
+            //    Console.WriteLine(dataMessage.message);
+            //});
 
         }
 
@@ -150,7 +155,7 @@ namespace LockConsole
         /// <returns></returns>
         static bool createLogFile(string fileName)
         {
-            File.Create(fileName);
+            File.Create(fileName).Close();
             return (checkIfLogExcists(fileName));
         }
 
@@ -198,6 +203,57 @@ namespace LockConsole
                 JsonSerializer serializer = new JsonSerializer();
                 serializer.Serialize(file, logMessages);
 
+            }
+        }
+
+        /// <summary>
+        /// This function is used to synchronize the local event log with the connected database via the endpoint backend
+        /// </summary>
+        static void syncLogWithAPI()
+        {
+            List<DataMessage> dataMessagesInLog = readLogFile(DateTime.Now.ToShortDateString() + ".json");
+            List<DataMessage> updatedLog = new List<DataMessage>();
+            string url = "http://127.0.0.1:8000/lockObject";
+
+            if (dataMessagesInLog != null)
+            {
+                using (var client = new HttpClient())
+                {
+                    dataMessagesInLog.ForEach(delegate (DataMessage dataMessage)
+                    {
+                        if (!dataMessage.APISucces)
+                        {
+                            var response = client.PostAsJsonAsync(url, dataMessage).Result;
+                            var responseCode = response.StatusCode;
+                            if(response.IsSuccessStatusCode)
+                            {
+                                dataMessage.APISucces = true;
+                            }
+                            updatedLog.Add(dataMessage);
+                        }
+                        else
+                        {
+                            updatedLog.Add(dataMessage);
+                        }
+                    });
+                    updateLogAfterAPISync(updatedLog);
+                    logMessages = updatedLog;
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// Update local log with the synchronised log after the update with the API
+        /// </summary>
+        /// <param name="updatedLog"></param>
+        static void updateLogAfterAPISync(List<DataMessage> updatedLog)
+        {
+            string fileName = DateTime.Now.ToShortDateString() + ".json";
+            using (StreamWriter file = new StreamWriter(fileName, false))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(file, updatedLog);
             }
         }
 
