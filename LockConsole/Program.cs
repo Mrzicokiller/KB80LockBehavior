@@ -36,8 +36,10 @@ namespace LockConsole
                     logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
                 }
             }
-
-            syncLogWithAPI();
+            else
+            {
+                createLogFile(DateTime.Now.ToShortDateString() + ".json");
+            }
 
             Console.WriteLine("Hello World!");
 
@@ -54,6 +56,7 @@ namespace LockConsole
                 }*/
 
                 currentTime = DateTime.Now;
+                syncLogWithAPI();
                 Thread.Sleep(2000);
             } while (currentTime < DateTime.Parse("18:00:00"));
 
@@ -127,7 +130,7 @@ namespace LockConsole
         /// Read data from given filename
         /// </summary>
         /// <param name="fileName">The name of the file that needs to be read</param>
-        static void readLogFile(string fileName)
+        static List<DataMessage> readLogFile(string fileName)
         {
             List<DataMessage> dataMessages;
 
@@ -137,23 +140,11 @@ namespace LockConsole
                 dataMessages = JsonConvert.DeserializeObject<List<DataMessage>>(json);
             }
 
-            dataMessages.ForEach(delegate(DataMessage dataMessage){
-                Console.WriteLine(dataMessage.message);
-            });
+            return dataMessages;
 
-        }
-
-        /// <summary>
-        /// Removes the given line from the given file
-        /// </summary>
-        /// <param name="message">The dataMessage that needs to be removed</param>
-        static void removeLineFromLog(DataMessage dataMessage)
-        {
-            if (logMessages.Contains(dataMessage))
-            {
-                logMessages.Remove(dataMessage);
-                updateEventLog();
-            }
+            //dataMessages.ForEach(delegate(DataMessage dataMessage){
+            //    Console.WriteLine(dataMessage.message);
+            //});
 
         }
 
@@ -217,13 +208,45 @@ namespace LockConsole
 
         static void syncLogWithAPI()
         {
-            Console.WriteLine("posting...");
-            using (var client = new HttpClient())
+            List<DataMessage> dataMessagesInLog = readLogFile(DateTime.Now.ToShortDateString() + ".json");
+            List<DataMessage> updatedLog = new List<DataMessage>();
+            string url = "http://127.0.0.1:8000/lockObject";
+
+            if (dataMessagesInLog != null)
             {
-                string url = "https://postb.in/1602089557334-5706080507952";
-                var data = createMessage(DateTime.Now, false, "home", "test message", true);
-                var response = client.PostAsJsonAsync(url, data).Result;
-                Console.WriteLine(response);
+                using (var client = new HttpClient())
+                {
+                    dataMessagesInLog.ForEach(delegate (DataMessage dataMessage)
+                    {
+                        if (!dataMessage.APISucces)
+                        {
+                            var response = client.PostAsJsonAsync(url, dataMessage).Result;
+                            var responseCode = response.StatusCode;
+                            if(response.IsSuccessStatusCode)
+                            {
+                                dataMessage.APISucces = true;
+                            }
+                            updatedLog.Add(dataMessage);
+                        }
+                        else
+                        {
+                            updatedLog.Add(dataMessage);
+                        }
+                    });
+                    updateLogAfterAPISync(updatedLog);
+                    logMessages = updatedLog;
+                }
+
+            }
+        }
+
+        static void updateLogAfterAPISync(List<DataMessage> updatedLog)
+        {
+            string fileName = DateTime.Now.ToShortDateString() + ".json";
+            using (StreamWriter file = new StreamWriter(fileName, false))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(file, updatedLog);
             }
         }
 
