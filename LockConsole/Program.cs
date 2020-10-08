@@ -206,6 +206,9 @@ namespace LockConsole
             }
         }
 
+        /// <summary>
+        /// This function is used to synchronize the local event log with the connected database via the endpoint backend
+        /// </summary>
         static void syncLogWithAPI()
         {
             List<DataMessage> dataMessagesInLog = readLogFile(DateTime.Now.ToShortDateString() + ".json");
@@ -240,6 +243,10 @@ namespace LockConsole
             }
         }
 
+        /// <summary>
+        /// Update local log with the synchronised log after the update with the API
+        /// </summary>
+        /// <param name="updatedLog"></param>
         static void updateLogAfterAPISync(List<DataMessage> updatedLog)
         {
             string fileName = DateTime.Now.ToShortDateString() + ".json";
