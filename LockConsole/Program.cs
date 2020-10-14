@@ -6,7 +6,6 @@ using System.Threading;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 
 namespace LockConsole
 {
@@ -25,13 +24,17 @@ namespace LockConsole
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
         static List<DataMessage> logMessages { get; set; } = new List<DataMessage>();
+        static SettingsObject configuration;
 
         static void Main(string[] args)
         {
+            configuration = getConfiguration();
+
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
-            if(checkIfLogExcists(DateTime.Now.ToShortDateString() + ".json"))
+
+            if (checkIfFileExcists(DateTime.Now.ToShortDateString() + ".json"))
             {
-                if(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")) != null)
+                if (JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")) != null)
                 {
                     logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
                 }
@@ -48,17 +51,10 @@ namespace LockConsole
                 GetInactivityTime();
                 CheckInactivityThreshold();
 
-                /*keyInput = Console.ReadKey();
-                Console.WriteLine("Checking for ESC");
-                if (keyInput.Key == ConsoleKey.Escape)
-                {
-                    Environment.Exit(0);
-                }*/
-
                 currentTime = DateTime.Now;
                 syncLogWithAPI();
                 Thread.Sleep(2000);
-            } while (currentTime < DateTime.Parse("18:00:00"));
+            } while (currentTime < DateTime.Parse(configuration.EndTime));
 
 
 
@@ -88,9 +84,8 @@ namespace LockConsole
             DateTime fetchedTime = DateTime.Now.AddMilliseconds(-(Environment.TickCount - lastInputInfo.dwTime));
             if (DateTime.Compare(lastActivity, fetchedTime) < 0)
             {
-                Console.WriteLine("Change time");
                 lastActivity = fetchedTime;
-                lastActivityWithThreshold = fetchedTime.Add(new TimeSpan(00, 01, 00));
+                lastActivityWithThreshold = fetchedTime.Add(TimeSpan.Parse(configuration.InActivityThreshold));
                 isInactiveAfterThreshold = false;
             }
         }
@@ -100,9 +95,9 @@ namespace LockConsole
         {
             if (DateTime.Compare(lastActivityWithThreshold, DateTime.Now) < 0)
             {
-                if(isInactiveAfterThreshold != true)
+                if (isInactiveAfterThreshold != true)
                 {
-                    writeToLog(createMessage(DateTime.Now, isLocked, "settings", "threshold has been past", false));
+                    writeToLog(createMessage(DateTime.Now, isLocked, configuration.location, "threshold has been past", false));
                 }
                 isInactiveAfterThreshold = true;
             }
@@ -121,7 +116,7 @@ namespace LockConsole
             if (logMessages == null || !logMessages.Contains(dataMessage))
             {
                 logMessages.Add(dataMessage);
-                updateEventLog();
+                updateEventLog(logMessages);
             }
 
         }
@@ -141,11 +136,6 @@ namespace LockConsole
             }
 
             return dataMessages;
-
-            //dataMessages.ForEach(delegate(DataMessage dataMessage){
-            //    Console.WriteLine(dataMessage.message);
-            //});
-
         }
 
         /// <summary>
@@ -156,24 +146,21 @@ namespace LockConsole
         static bool createLogFile(string fileName)
         {
             File.Create(fileName).Close();
-            return (checkIfLogExcists(fileName));
+            return (checkIfFileExcists(fileName));
         }
 
         /// <summary>
         /// Check if log already excits
         /// </summary>
         /// <param name="fileName">The fileName of the log file that needs to be checked</param>
-        static bool checkIfLogExcists(string fileName)
+        static bool checkIfFileExcists(string fileName)
         {
-            Console.WriteLine(fileName);
             if (File.Exists(fileName))
             {
-                Console.WriteLine("found");
                 return true;
             }
             else
             {
-                Console.WriteLine("not found");
                 return false;
             }
 
@@ -182,10 +169,10 @@ namespace LockConsole
         /// <summary>
         /// Updates the logfile with the logMessages list
         /// </summary>
-        static void updateEventLog()
+        static void updateEventLog(List<DataMessage> updatedLog)
         {
             string fileName = DateTime.Now.ToShortDateString() + ".json";
-            if (!checkIfLogExcists(fileName))
+            if (!checkIfFileExcists(fileName))
             {
                 if (createLogFile(fileName))
                 {
@@ -201,7 +188,7 @@ namespace LockConsole
             using (StreamWriter file = new StreamWriter(fileName, false))
             {
                 JsonSerializer serializer = new JsonSerializer();
-                serializer.Serialize(file, logMessages);
+                serializer.Serialize(file, updatedLog);
 
             }
         }
@@ -223,37 +210,30 @@ namespace LockConsole
                     {
                         if (!dataMessage.APISucces)
                         {
-                            var response = client.PostAsJsonAsync(url, dataMessage).Result;
-                            var responseCode = response.StatusCode;
-                            if(response.IsSuccessStatusCode)
+                            try
                             {
-                                dataMessage.APISucces = true;
+                                var response = client.PostAsJsonAsync(url, dataMessage).Result;
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    dataMessage.APISucces = true;
+                                }
+                                updatedLog.Add(dataMessage);
                             }
-                            updatedLog.Add(dataMessage);
+                            catch
+                            {
+                                updatedLog.Add(dataMessage);
+                            }
+                            
                         }
                         else
                         {
                             updatedLog.Add(dataMessage);
                         }
                     });
-                    updateLogAfterAPISync(updatedLog);
+                    updateEventLog(updatedLog);
                     logMessages = updatedLog;
                 }
 
-            }
-        }
-
-        /// <summary>
-        /// Update local log with the synchronised log after the update with the API
-        /// </summary>
-        /// <param name="updatedLog"></param>
-        static void updateLogAfterAPISync(List<DataMessage> updatedLog)
-        {
-            string fileName = DateTime.Now.ToShortDateString() + ".json";
-            using (StreamWriter file = new StreamWriter(fileName, false))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Serialize(file, updatedLog);
             }
         }
 
@@ -261,7 +241,8 @@ namespace LockConsole
         {
             return new DataMessage
             {
-                timeStamp = timeStamp,
+                userId = configuration.userID,
+                timeStamp = timeStamp.ToString("yyyy-MM-dd HH:mm:ss"),
                 locked = isLocked,
                 location = location,
                 message = message,
@@ -269,16 +250,55 @@ namespace LockConsole
             };
         }
 
+        static void createConfigurationFile()
+        {
+            File.Create("configuration.json").Close();
+            SettingsObject standardConfiguration = new SettingsObject { userID = "testUser", location = "home", BeginTime = "08:00:00", EndTime = "17:00:00", InActivityThreshold = "00:01:00", dryRunMode = true };
+            using (StreamWriter file = new StreamWriter("configuration.json", false))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(file, standardConfiguration);
+
+            }
+        }
+
+        static SettingsObject getConfiguration()
+        {
+            SettingsObject configuration;
+            if (!checkIfFileExcists("configuration.json"))
+            {
+                createConfigurationFile();
+            }
+
+            using (StreamReader reader = new StreamReader("configuration.json"))
+            {
+                string json = reader.ReadToEnd();
+                configuration = JsonConvert.DeserializeObject<SettingsObject>(json);
+            }
+
+            return configuration;
+        }
+
     }
 
     public class DataMessage
     {
-        //public int recordID { get; set; }
-        public DateTime timeStamp { get; set; }
+        public string userId { get; set; }
+        public string timeStamp { get; set; }
         public bool locked { get; set; }
         public string location { get; set; }
         public string message { get; set; }
         public bool APISucces { get; set; }
     }
 
+    public class SettingsObject
+    {
+        public string userID { get; set; }
+        public string location { get; set; }
+        public string BeginTime { get; set; }
+        public string EndTime { get; set; }
+        public string InActivityThreshold { get; set; }
+        public bool dryRunMode { get; set; }
+
+    }
 }
