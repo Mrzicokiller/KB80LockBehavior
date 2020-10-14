@@ -45,6 +45,12 @@ namespace LockConsole
             }
 
             Console.WriteLine("Hello World!");
+            if(configuration.dryRunMode)
+            {
+                Console.BackgroundColor = ConsoleColor.Red;
+                Console.WriteLine("Dry run mode is enabled");
+                Console.BackgroundColor = ConsoleColor.Black;
+            }
 
             do
             {
@@ -53,6 +59,12 @@ namespace LockConsole
 
                 currentTime = DateTime.Now;
                 syncLogWithAPI();
+
+                if(configuration.dryRunMode)
+                {
+                    dryRunModeLogger();
+                }
+
                 Thread.Sleep(2000);
             } while (currentTime < DateTime.Parse(configuration.EndTime));
 
@@ -277,6 +289,16 @@ namespace LockConsole
             }
 
             return configuration;
+        }
+
+        static void dryRunModeLogger()
+        {
+            Console.WriteLine("Current Time: " + currentTime);
+            Console.WriteLine("Last Activity Timestamp: " + lastActivity);
+            Console.WriteLine("Set Threshold: " + configuration.InActivityThreshold);
+            Console.WriteLine("Last Activity with Threshold: " + lastActivityWithThreshold);
+            Console.WriteLine("Lock Status: " + isLocked);
+
         }
 
     }
