@@ -210,13 +210,20 @@ namespace LockConsole
                     {
                         if (!dataMessage.APISucces)
                         {
-                            var response = client.PostAsJsonAsync(url, dataMessage).Result;
-                            var responseCode = response.StatusCode;
-                            if (response.IsSuccessStatusCode)
+                            try
                             {
-                                dataMessage.APISucces = true;
+                                var response = client.PostAsJsonAsync(url, dataMessage).Result;
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    dataMessage.APISucces = true;
+                                }
+                                updatedLog.Add(dataMessage);
                             }
-                            updatedLog.Add(dataMessage);
+                            catch
+                            {
+                                updatedLog.Add(dataMessage);
+                            }
+                            
                         }
                         else
                         {
@@ -234,8 +241,8 @@ namespace LockConsole
         {
             return new DataMessage
             {
-                userID = configuration.userID,
-                timeStamp = timeStamp,
+                userId = configuration.userID,
+                timeStamp = timeStamp.ToString("yyyy-MM-dd HH:mm:ss"),
                 locked = isLocked,
                 location = location,
                 message = message,
@@ -276,8 +283,8 @@ namespace LockConsole
 
     public class DataMessage
     {
-        public string userID { get; set; }
-        public DateTime timeStamp { get; set; }
+        public string userId { get; set; }
+        public string timeStamp { get; set; }
         public bool locked { get; set; }
         public string location { get; set; }
         public string message { get; set; }
