@@ -56,6 +56,7 @@ namespace LockConsole
             {
                 GetInactivityTime();
                 CheckInactivityThreshold();
+                getMicrophoneStatus();
 
                 currentTime = DateTime.Now;
                 syncLogWithAPI();
@@ -117,6 +118,23 @@ namespace LockConsole
             {
                 isInactiveAfterThreshold = false;
             }
+        }
+
+        static void getMicrophoneStatus()
+        {
+            RegistryKey winLogonKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged", false);
+            foreach (string valueName in winLogonKey.GetSubKeyNames())
+            {
+                string tempurl = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone\\NonPackaged\\" + valueName;
+                var temp = Registry.LocalMachine.OpenSubKey(tempurl, false);
+                var start = temp.GetValue("LastUsedTimeStart");
+                var tempnow = currentTime.ToFileTime();
+               // var stop = temp.GetValue("LastUsedTimeStop");
+                //DateTime temp2 = DateTime.FromFileTime((long)start);
+                DateTime temp3 = DateTime.FromFileTime(tempnow);
+                Console.WriteLine(valueName);
+            }
+            var test = winLogonKey.GetSubKeyNames();
         }
 
         /// <summary>
