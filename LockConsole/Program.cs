@@ -6,6 +6,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Globalization;
 
 namespace LockConsole
 {
@@ -32,16 +33,16 @@ namespace LockConsole
 
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
-            if (checkIfFileExcists(DateTime.Now.ToShortDateString() + ".json"))
+            if (checkIfFileExcists(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json"))
             {
-                if (JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")) != null)
+                if (JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json")) != null)
                 {
-                    logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@DateTime.Now.ToShortDateString() + ".json")));
+                    logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json")));
                 }
             }
             else
             {
-                createLogFile(DateTime.Now.ToShortDateString() + ".json");
+                createLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
             }
 
             Console.WriteLine("Hello World!");
@@ -183,7 +184,7 @@ namespace LockConsole
         /// </summary>
         static void updateEventLog(List<DataMessage> updatedLog)
         {
-            string fileName = DateTime.Now.ToShortDateString() + ".json";
+            string fileName = currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json";
             if (!checkIfFileExcists(fileName))
             {
                 if (createLogFile(fileName))
@@ -210,7 +211,7 @@ namespace LockConsole
         /// </summary>
         static void syncLogWithAPI()
         {
-            List<DataMessage> dataMessagesInLog = readLogFile(DateTime.Now.ToShortDateString() + ".json");
+            List<DataMessage> dataMessagesInLog = readLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
             List<DataMessage> updatedLog = new List<DataMessage>();
             string url = "http://127.0.0.1:8000/lockObject";
 
