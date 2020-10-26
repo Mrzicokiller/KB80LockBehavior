@@ -259,7 +259,8 @@ namespace LockConsole
                 locked = isLocked,
                 location = location,
                 message = message,
-                APISucces = APISucces
+                APISucces = APISucces,
+                dryRunMode = configuration.dryRunMode
             };
         }
 
@@ -312,6 +313,7 @@ namespace LockConsole
         public string location { get; set; }
         public string message { get; set; }
         public bool APISucces { get; set; }
+        public bool dryRunMode { get; set; }
     }
 
     public class SettingsObject
