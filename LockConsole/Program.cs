@@ -237,7 +237,7 @@ namespace LockConsole
                                 if(configuration.dryRunMode)
                                 {
                                     Console.BackgroundColor = ConsoleColor.DarkGreen;
-                                    Console.WriteLine(response);
+                                    Console.WriteLine(response.Content.ReadAsStringAsync().Result);
                                     Console.BackgroundColor = ConsoleColor.Black;
                                 }
 
