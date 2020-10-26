@@ -45,7 +45,7 @@ namespace LockConsole
                 createLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
             }
 
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Program succesfully started");
             if(configuration.dryRunMode)
             {
                 Console.BackgroundColor = ConsoleColor.Red;
@@ -111,8 +111,8 @@ namespace LockConsole
                 if (isInactiveAfterThreshold != true)
                 {
                     writeToLog(createMessage(DateTime.Now, isLocked, configuration.location, "threshold has been past", false));
+                    isInactiveAfterThreshold = true;
                 }
-                isInactiveAfterThreshold = true;
             }
             else
             {
@@ -213,7 +213,6 @@ namespace LockConsole
         {
             List<DataMessage> dataMessagesInLog = readLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
             List<DataMessage> updatedLog = new List<DataMessage>();
-            string url = "http://127.0.0.1:8000/lockObject";
 
             if (dataMessagesInLog != null)
             {
@@ -225,7 +224,21 @@ namespace LockConsole
                         {
                             try
                             {
-                                var response = client.PostAsJsonAsync(url, dataMessage).Result;
+                                if (configuration.dryRunMode)
+                                {
+                                    Console.BackgroundColor = ConsoleColor.DarkGreen;
+                                    Console.WriteLine("Posting one message...");
+                                    Console.BackgroundColor = ConsoleColor.Black;
+                                }
+                                var response = client.PostAsJsonAsync(configuration.dataPostURL, dataMessage).Result;
+
+                                if(configuration.dryRunMode)
+                                {
+                                    Console.BackgroundColor = ConsoleColor.DarkGreen;
+                                    Console.WriteLine(response.Content);
+                                    Console.BackgroundColor = ConsoleColor.Black;
+                                }
+
                                 if (response.IsSuccessStatusCode)
                                 {
                                     dataMessage.APISucces = true;
@@ -267,7 +280,7 @@ namespace LockConsole
         static void createConfigurationFile()
         {
             File.Create("configuration.json").Close();
-            SettingsObject standardConfiguration = new SettingsObject { userID = "testUser", location = "home", BeginTime = "08:00:00", EndTime = "17:00:00", InActivityThreshold = "00:01:00", dryRunMode = true };
+            SettingsObject standardConfiguration = new SettingsObject { userID = "testUser", location = "home", BeginTime = "08:00:00", EndTime = "17:00:00", InActivityThreshold = "00:01:00", dataPostURL = "http://127.0.0.1:8000/lockObject", dryRunMode = true };
             using (StreamWriter file = new StreamWriter("configuration.json", false))
             {
                 JsonSerializer serializer = new JsonSerializer();
@@ -323,6 +336,7 @@ namespace LockConsole
         public string BeginTime { get; set; }
         public string EndTime { get; set; }
         public string InActivityThreshold { get; set; }
+        public string dataPostURL { get; set; }
         public bool dryRunMode { get; set; }
 
     }
