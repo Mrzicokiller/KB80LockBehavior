@@ -79,12 +79,22 @@ namespace LockConsole
         {
             if (e.Reason == SessionSwitchReason.SessionLock)
             {
-                Console.WriteLine("locked");
+                if(configuration.dryRunMode)
+                {
+                    Console.BackgroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("locked");
+                    Console.BackgroundColor = ConsoleColor.Black;
+                }
                 isLocked = true;
             }
             else if (e.Reason == SessionSwitchReason.SessionUnlock)
             {
-                Console.WriteLine("unlocked");
+                if(configuration.dryRunMode)
+                {
+                    Console.BackgroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("unlocked");
+                    Console.BackgroundColor = ConsoleColor.Black;
+                }
                 isLocked = false;
             }
         }
