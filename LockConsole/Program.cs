@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Globalization;
+using System.Text;
 
 namespace LockConsole
 {
@@ -230,12 +231,13 @@ namespace LockConsole
                                     Console.WriteLine("Posting one message...");
                                     Console.BackgroundColor = ConsoleColor.Black;
                                 }
-                                var response = client.PostAsJsonAsync(configuration.dataPostURL, dataMessage).Result;
+                                var postContent = new StringContent(JsonConvert.SerializeObject(dataMessage), Encoding.UTF8, "application/json");
+                                var response = client.PostAsync(configuration.dataPostURL, postContent).Result;
 
                                 if(configuration.dryRunMode)
                                 {
                                     Console.BackgroundColor = ConsoleColor.DarkGreen;
-                                    Console.WriteLine(response.Content);
+                                    Console.WriteLine(response);
                                     Console.BackgroundColor = ConsoleColor.Black;
                                 }
 
