@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Globalization;
 using System.Text;
-using System.Diagnostics;
 using System.Linq;
 
 namespace LockConsole
@@ -126,7 +125,7 @@ namespace LockConsole
             {
                 if (isInactiveAfterThreshold != true)
                 {
-                    FileManager.writeToLog(DataMessage.createMessage(configuration.userID, DateTime.Now, isLocked, configuration.location, "threshold has been past", false, checkForActiveConferenceProgram(), configuration.dryRunMode), logMessages, currentTime); ;
+                    FileManager.writeToLog(DataMessage.createMessage(configuration.userID, DateTime.Now, isLocked, configuration.location, "threshold has been past", false, ConferencePrograms.checkForActiveConferenceProgram(configuration.conferencePrograms), configuration.dryRunMode), logMessages, currentTime); ;
                     isInactiveAfterThreshold = true;
                 }
             }
@@ -134,42 +133,6 @@ namespace LockConsole
             {
                 isInactiveAfterThreshold = false;
             }
-        }
-
-        /// <summary>
-        /// Check if there are active conference programs like teams, skype and zoom
-        /// </summary>
-        /// <returns>a bool with true if there are active programs and false if there are no active programs</returns>
-        static bool checkForActiveConferenceProgram()
-        {
-            if(getActiveConferencePrograms().Count > 0)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Gets all active conference programs
-        /// </summary>
-        /// <returns>A string list with all active confernce programs names</returns>
-        static List<string> getActiveConferencePrograms()
-        {
-            Process [] activeProcesses = Process.GetProcesses();
-            List<string> activeConferenceProcesses = new List<string>();
-
-            foreach(Process process in activeProcesses)
-            {
-                if (configuration.conferencePrograms.Contains(process.ProcessName))
-                {
-                    activeConferenceProcesses.Add(process.ProcessName);
-                }
-            }
-
-            return activeConferenceProcesses;
         }
 
         /// <summary>
@@ -240,7 +203,7 @@ namespace LockConsole
             Console.WriteLine("Set Threshold: " + configuration.InActivityThreshold);
             Console.WriteLine("Last Activity with Threshold: " + lastActivityWithThreshold);
             Console.WriteLine("Lock Status: " + isLocked);
-            Console.WriteLine("Active Conference Programs:" + String.Join(',' , getActiveConferencePrograms().Distinct()));
+            Console.WriteLine("Active Conference Programs:" + String.Join(',' , ConferencePrograms.getActiveConferencePrograms(configuration.conferencePrograms).Distinct()));
 
         }
 
