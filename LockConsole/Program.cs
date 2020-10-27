@@ -76,7 +76,9 @@ namespace LockConsole
 
         }
 
-        // Observer: When a SystemEvent.SessionSwitch is fired checks if SessionLock event is fired
+        /// <summary>
+        /// Observer: When a SystemEvent.SessionSwitch is fired checks if SessionLock event is fired
+        /// </summary>
         static void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
         {
             if (e.Reason == SessionSwitchReason.SessionLock)
@@ -101,7 +103,9 @@ namespace LockConsole
             }
         }
 
-        // Get last input timestamp and set in global variable and threshold time
+        /// <summary>
+        /// Get last input timestamp and set in global variable and threshold time
+        /// </summary>
         static void GetInactivityTime()
         {
             LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
@@ -116,7 +120,9 @@ namespace LockConsole
             }
         }
 
-        // Check if set threshold has been past and create http request or write in log of http is not posible
+        /// <summary>
+        /// Check if set threshold has been past and set the boolean isInactiveAfterThreshold and creates message and writes to the log
+        /// </summary>
         static void CheckInactivityThreshold()
         {
             if (DateTime.Compare(lastActivityWithThreshold, DateTime.Now) < 0)
@@ -133,6 +139,10 @@ namespace LockConsole
             }
         }
 
+        /// <summary>
+        /// Check if there are active conference programs like teams, skype and zoom
+        /// </summary>
+        /// <returns>a bool with true if there are active programs and false if there are no active programs</returns>
         static bool checkForActiveConferenceProgram()
         {
             if(getActiveConferencePrograms().Count > 0)
@@ -145,6 +155,10 @@ namespace LockConsole
             }
         }
 
+        /// <summary>
+        /// Gets all active conference programs
+        /// </summary>
+        /// <returns>A string list with all active confernce programs names</returns>
         static List<string> getActiveConferencePrograms()
         {
             Process [] activeProcesses = Process.GetProcesses();
@@ -305,6 +319,15 @@ namespace LockConsole
             }
         }
 
+        /// <summary>
+        /// Creates the message for the log and API
+        /// </summary>
+        /// <param name="timeStamp">Timestamp for the message</param>
+        /// <param name="isLocked">Lockstatus</param>
+        /// <param name="location">location from configuration</param>
+        /// <param name="message">A extra message</param>
+        /// <param name="APISucces">API sync status</param>
+        /// <returns>A datamessage object ready for the log and API</returns>
         static DataMessage createMessage(DateTime timeStamp, bool isLocked, string location, string message, bool APISucces)
         {
             return new DataMessage
@@ -320,6 +343,9 @@ namespace LockConsole
             };
         }
 
+        /// <summary>
+        /// Creates a configuration file if not found
+        /// </summary>
         static void createConfigurationFile()
         {
             File.Create("configuration.json").Close();
@@ -333,6 +359,10 @@ namespace LockConsole
             }
         }
 
+        /// <summary>
+        /// Reads configuration file and return it
+        /// </summary>
+        /// <returns>Settingsobject with configuration from file</returns>
         static SettingsObject getConfiguration()
         {
             SettingsObject configuration;
@@ -350,6 +380,9 @@ namespace LockConsole
             return configuration;
         }
 
+        /// <summary>
+        /// logs data while in dry run mode
+        /// </summary>
         static void dryRunModeLogger()
         {
             Console.WriteLine("Current Time: " + currentTime);
