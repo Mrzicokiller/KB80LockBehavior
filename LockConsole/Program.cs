@@ -28,15 +28,15 @@ namespace LockConsole
         static DateTime lastActivityWithThreshold { get; set; }
         static DateTime currentTime = DateTime.Now;
         static List<DataMessage> logMessages { get; set; } = new List<DataMessage>();
-        static SettingsObject configuration;
+        static ConfigurationObject configuration;
 
         static void Main(string[] args)
         {
-            configuration = getConfiguration();
+            configuration = ConfigurationObject.getConfiguration();
 
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
-            if (checkIfFileExcists(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json"))
+            if (FileManager.checkIfFileExcists(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json"))
             {
                 if (JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json")) != null)
                 {
@@ -45,7 +45,7 @@ namespace LockConsole
             }
             else
             {
-                createLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
+                FileManager.createLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
             }
 
             Console.WriteLine("Program succesfully started");
@@ -71,9 +71,6 @@ namespace LockConsole
 
                 Thread.Sleep(2000);
             } while (currentTime < DateTime.Parse(configuration.EndTime));
-
-
-
         }
 
         /// <summary>
@@ -129,7 +126,7 @@ namespace LockConsole
             {
                 if (isInactiveAfterThreshold != true)
                 {
-                    writeToLog(createMessage(DateTime.Now, isLocked, configuration.location, "threshold has been past", false));
+                    FileManager.writeToLog(DataMessage.createMessage(configuration.userID, DateTime.Now, isLocked, configuration.location, "threshold has been past", false, checkForActiveConferenceProgram(), configuration.dryRunMode), logMessages, currentTime); ;
                     isInactiveAfterThreshold = true;
                 }
             }
@@ -176,97 +173,11 @@ namespace LockConsole
         }
 
         /// <summary>
-        /// Writes message to file
-        /// </summary>
-        /// <param name="dataMessage">the dataMessage object</param>
-        static void writeToLog(DataMessage dataMessage)
-        {
-            if (logMessages == null || !logMessages.Contains(dataMessage))
-            {
-                logMessages.Add(dataMessage);
-                updateEventLog(logMessages);
-            }
-
-        }
-
-        /// <summary>
-        /// Read data from given filename
-        /// </summary>
-        /// <param name="fileName">The name of the file that needs to be read</param>
-        static List<DataMessage> readLogFile(string fileName)
-        {
-            List<DataMessage> dataMessages;
-
-            using (StreamReader reader = new StreamReader(fileName))
-            {
-                string json = reader.ReadToEnd();
-                dataMessages = JsonConvert.DeserializeObject<List<DataMessage>>(json);
-            }
-
-            return dataMessages;
-        }
-
-        /// <summary>
-        /// Create the log file
-        /// </summary>
-        /// <param name="fileName">The name of the file that needs to be created</param>
-        /// <returns></returns>
-        static bool createLogFile(string fileName)
-        {
-            File.Create(fileName).Close();
-            return (checkIfFileExcists(fileName));
-        }
-
-        /// <summary>
-        /// Check if log already excits
-        /// </summary>
-        /// <param name="fileName">The fileName of the log file that needs to be checked</param>
-        static bool checkIfFileExcists(string fileName)
-        {
-            if (File.Exists(fileName))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-
-        }
-
-        /// <summary>
-        /// Updates the logfile with the logMessages list
-        /// </summary>
-        static void updateEventLog(List<DataMessage> updatedLog)
-        {
-            string fileName = currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json";
-            if (!checkIfFileExcists(fileName))
-            {
-                if (createLogFile(fileName))
-                {
-                    Console.WriteLine("file succesfull created");
-                }
-                else
-                {
-                    throw new IOException("file not created");
-                }
-
-            }
-
-            using (StreamWriter file = new StreamWriter(fileName, false))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Serialize(file, updatedLog);
-
-            }
-        }
-
-        /// <summary>
         /// This function is used to synchronize the local event log with the connected database via the endpoint backend
         /// </summary>
         static void syncLogWithAPI()
         {
-            List<DataMessage> dataMessagesInLog = readLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
+            List<DataMessage> dataMessagesInLog = FileManager.readLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
             List<DataMessage> updatedLog = new List<DataMessage>();
 
             if (dataMessagesInLog != null)
@@ -312,72 +223,11 @@ namespace LockConsole
                             updatedLog.Add(dataMessage);
                         }
                     });
-                    updateEventLog(updatedLog);
+                    FileManager.updateEventLog(updatedLog, currentTime);
                     logMessages = updatedLog;
                 }
 
             }
-        }
-
-        /// <summary>
-        /// Creates the message for the log and API
-        /// </summary>
-        /// <param name="timeStamp">Timestamp for the message</param>
-        /// <param name="isLocked">Lockstatus</param>
-        /// <param name="location">location from configuration</param>
-        /// <param name="message">A extra message</param>
-        /// <param name="APISucces">API sync status</param>
-        /// <returns>A datamessage object ready for the log and API</returns>
-        static DataMessage createMessage(DateTime timeStamp, bool isLocked, string location, string message, bool APISucces)
-        {
-            return new DataMessage
-            {
-                userId = configuration.userID,
-                timeStamp = timeStamp.ToString("yyyy-MM-dd HH:mm:ss"),
-                locked = isLocked,
-                location = location,
-                message = message,
-                activeConferenceProgram = checkForActiveConferenceProgram(),
-                APISucces = APISucces,
-                dryRunMode = configuration.dryRunMode
-            };
-        }
-
-        /// <summary>
-        /// Creates a configuration file if not found
-        /// </summary>
-        static void createConfigurationFile()
-        {
-            File.Create("configuration.json").Close();
-            List<string> standardMeetingProcesses = new List<string>(){ "Teams", "Discord", "Zoom", "Skype"};
-            SettingsObject standardConfiguration = new SettingsObject { userID = "testUser", location = "home", BeginTime = "08:00:00", EndTime = "17:00:00", InActivityThreshold = "00:01:00", dataPostURL = "http://127.0.0.1:8000/lockObject", conferencePrograms = standardMeetingProcesses ,dryRunMode = true };
-            using (StreamWriter file = new StreamWriter("configuration.json", false))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Serialize(file, standardConfiguration);
-
-            }
-        }
-
-        /// <summary>
-        /// Reads configuration file and return it
-        /// </summary>
-        /// <returns>Settingsobject with configuration from file</returns>
-        static SettingsObject getConfiguration()
-        {
-            SettingsObject configuration;
-            if (!checkIfFileExcists("configuration.json"))
-            {
-                createConfigurationFile();
-            }
-
-            using (StreamReader reader = new StreamReader("configuration.json"))
-            {
-                string json = reader.ReadToEnd();
-                configuration = JsonConvert.DeserializeObject<SettingsObject>(json);
-            }
-
-            return configuration;
         }
 
         /// <summary>
@@ -393,31 +243,6 @@ namespace LockConsole
             Console.WriteLine("Active Conference Programs:" + String.Join(',' , getActiveConferencePrograms().Distinct()));
 
         }
-
-    }
-
-    public class DataMessage
-    {
-        public string userId { get; set; }
-        public string timeStamp { get; set; }
-        public bool locked { get; set; }
-        public string location { get; set; }
-        public string message { get; set; }
-        public bool activeConferenceProgram { get; set; }
-        public bool APISucces { get; set; }
-        public bool dryRunMode { get; set; }
-    }
-
-    public class SettingsObject
-    {
-        public string userID { get; set; }
-        public string location { get; set; }
-        public string BeginTime { get; set; }
-        public string EndTime { get; set; }
-        public string InActivityThreshold { get; set; }
-        public string dataPostURL { get; set; }
-        public List<string> conferencePrograms { get; set; }
-        public bool dryRunMode { get; set; }
 
     }
 }
