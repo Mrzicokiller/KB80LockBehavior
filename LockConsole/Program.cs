@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Globalization;
 using System.Text;
 using System.Diagnostics;
+using System.Linq;
 
 namespace LockConsole
 {
@@ -32,7 +33,6 @@ namespace LockConsole
         static void Main(string[] args)
         {
             configuration = getConfiguration();
-            checkForActiveMeetingProgram();
 
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
@@ -133,20 +133,9 @@ namespace LockConsole
             }
         }
 
-        static bool checkForActiveMeetingProgram()
+        static bool checkForActiveConferenceProgram()
         {
-            Process[] activeProcesses = Process.GetProcesses();
-            List<Process> activeMeetingProcesses = new List<Process>();
-
-            foreach(Process process in activeProcesses)
-            {
-                if (configuration.conferencePrograms.Contains(process.ProcessName))
-                {
-                    activeMeetingProcesses.Add(process);
-                }
-            }
-
-            if(activeMeetingProcesses.Count > 0)
+            if(getActiveConferencePrograms().Count > 0)
             {
                 return true;
             }
@@ -154,6 +143,22 @@ namespace LockConsole
             {
                 return false;
             }
+        }
+
+        static List<string> getActiveConferencePrograms()
+        {
+            Process [] activeProcesses = Process.GetProcesses();
+            List<string> activeConferenceProcesses = new List<string>();
+
+            foreach(Process process in activeProcesses)
+            {
+                if (configuration.conferencePrograms.Contains(process.ProcessName))
+                {
+                    activeConferenceProcesses.Add(process.ProcessName);
+                }
+            }
+
+            return activeConferenceProcesses;
         }
 
         /// <summary>
@@ -309,7 +314,7 @@ namespace LockConsole
                 locked = isLocked,
                 location = location,
                 message = message,
-                activeConferenceProgram = checkForActiveMeetingProgram(),
+                activeConferenceProgram = checkForActiveConferenceProgram(),
                 APISucces = APISucces,
                 dryRunMode = configuration.dryRunMode
             };
@@ -352,6 +357,7 @@ namespace LockConsole
             Console.WriteLine("Set Threshold: " + configuration.InActivityThreshold);
             Console.WriteLine("Last Activity with Threshold: " + lastActivityWithThreshold);
             Console.WriteLine("Lock Status: " + isLocked);
+            Console.WriteLine("Active Conference Programs:" + String.Join(',' , getActiveConferencePrograms().Distinct()));
 
         }
 
