@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Globalization;
 using System.Text;
+using System.Diagnostics;
 
 namespace LockConsole
 {
@@ -31,6 +32,7 @@ namespace LockConsole
         static void Main(string[] args)
         {
             configuration = getConfiguration();
+            checkForActiveMeetingProgram();
 
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
@@ -128,6 +130,29 @@ namespace LockConsole
             else
             {
                 isInactiveAfterThreshold = false;
+            }
+        }
+
+        static bool checkForActiveMeetingProgram()
+        {
+            Process[] activeProcesses = Process.GetProcesses();
+            List<Process> activeMeetingProcesses = new List<Process>();
+
+            foreach(Process process in activeProcesses)
+            {
+                if (configuration.conferencePrograms.Contains(process.ProcessName))
+                {
+                    activeMeetingProcesses.Add(process);
+                }
+            }
+
+            if(activeMeetingProcesses.Count > 0)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 
@@ -284,6 +309,7 @@ namespace LockConsole
                 locked = isLocked,
                 location = location,
                 message = message,
+                activeConferenceProgram = checkForActiveMeetingProgram(),
                 APISucces = APISucces,
                 dryRunMode = configuration.dryRunMode
             };
@@ -292,7 +318,8 @@ namespace LockConsole
         static void createConfigurationFile()
         {
             File.Create("configuration.json").Close();
-            SettingsObject standardConfiguration = new SettingsObject { userID = "testUser", location = "home", BeginTime = "08:00:00", EndTime = "17:00:00", InActivityThreshold = "00:01:00", dataPostURL = "http://127.0.0.1:8000/lockObject", dryRunMode = true };
+            List<string> standardMeetingProcesses = new List<string>(){ "Teams", "Discord", "Zoom", "Skype"};
+            SettingsObject standardConfiguration = new SettingsObject { userID = "testUser", location = "home", BeginTime = "08:00:00", EndTime = "17:00:00", InActivityThreshold = "00:01:00", dataPostURL = "http://127.0.0.1:8000/lockObject", conferencePrograms = standardMeetingProcesses ,dryRunMode = true };
             using (StreamWriter file = new StreamWriter("configuration.json", false))
             {
                 JsonSerializer serializer = new JsonSerializer();
@@ -337,6 +364,7 @@ namespace LockConsole
         public bool locked { get; set; }
         public string location { get; set; }
         public string message { get; set; }
+        public bool activeConferenceProgram { get; set; }
         public bool APISucces { get; set; }
         public bool dryRunMode { get; set; }
     }
@@ -349,6 +377,7 @@ namespace LockConsole
         public string EndTime { get; set; }
         public string InActivityThreshold { get; set; }
         public string dataPostURL { get; set; }
+        public List<string> conferencePrograms { get; set; }
         public bool dryRunMode { get; set; }
 
     }
