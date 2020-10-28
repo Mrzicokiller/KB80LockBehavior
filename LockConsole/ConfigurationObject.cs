@@ -23,7 +23,7 @@ namespace LockConsole
         public static void createConfigurationFile()
         {
             File.Create("configuration.json").Close();
-            List<string> standardMeetingProcesses = new List<string>() { "Teams", "Discord", "Zoom", "Skype" };
+            List<string> standardMeetingProcesses = new List<string>() { "Teams", "Zoom", "Skype" };
             ConfigurationObject standardConfiguration = new ConfigurationObject { userID = "testUser", location = "home", BeginTime = "08:00:00", EndTime = "17:00:00", InActivityThreshold = "00:01:00", dataPostURL = "http://127.0.0.1:8000/lockObject", conferencePrograms = standardMeetingProcesses, dryRunMode = true };
             using (StreamWriter file = new StreamWriter("configuration.json", false))
             {
