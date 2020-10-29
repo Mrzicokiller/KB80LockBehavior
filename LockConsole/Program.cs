@@ -35,16 +35,16 @@ namespace LockConsole
 
             SystemEvents.SessionSwitch += new SessionSwitchEventHandler(SystemEvents_SessionSwitch);
 
-            if (FileManager.checkIfFileExcists(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json"))
+            if (FileManager.checkIfFileExcists("lockEventLog.json"))
             {
-                if (JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json")) != null)
+                if (JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@"lockEventLog.json")) != null)
                 {
-                    logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json")));
+                    logMessages = new List<DataMessage>(JsonConvert.DeserializeObject<List<DataMessage>>(File.ReadAllText(@"lockEventLog.json")));
                 }
             }
             else
             {
-                FileManager.createLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
+                FileManager.createLogFile("lockEventLog.json");
             }
 
             Console.WriteLine("Program succesfully started");
@@ -125,7 +125,7 @@ namespace LockConsole
             {
                 if (isInactiveAfterThreshold != true)
                 {
-                    FileManager.writeToLog(DataMessage.createMessage(configuration.userID, DateTime.Now, isLocked, configuration.location, "threshold has been past", false, ConferencePrograms.checkForActiveConferenceProgram(configuration.conferencePrograms), configuration.dryRunMode), logMessages, currentTime); ;
+                    FileManager.writeToLog(DataMessage.createMessage(configuration.userID, DateTime.Now, isLocked, configuration.location, "threshold has been past", false, ConferencePrograms.checkForActiveConferenceProgram(configuration.conferencePrograms), configuration.dryRunMode), logMessages, "lockEventLog.json"); ;
                     isInactiveAfterThreshold = true;
                 }
             }
@@ -140,7 +140,7 @@ namespace LockConsole
         /// </summary>
         static void syncLogWithAPI()
         {
-            List<DataMessage> dataMessagesInLog = FileManager.readLogFile(currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json");
+            List<DataMessage> dataMessagesInLog = FileManager.readLogFile("lockEventLog.json");
             List<DataMessage> updatedLog = new List<DataMessage>();
 
             if (dataMessagesInLog != null)
@@ -186,7 +186,7 @@ namespace LockConsole
                             updatedLog.Add(dataMessage);
                         }
                     });
-                    FileManager.updateEventLog(updatedLog, currentTime);
+                    FileManager.updateEventLog(updatedLog, "lockEventLog.json");
                     logMessages = updatedLog;
                 }
 

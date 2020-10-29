@@ -60,12 +60,12 @@ namespace LockConsole
         /// <param name="dataMessage">the dataMessage object</param>
         /// <param name="logMessages">Current logmessage</param>
         /// <param name="currentTime">Current time</param>
-        public static void writeToLog(DataMessage dataMessage, List<DataMessage> logMessages, DateTime currentTime)
+        public static void writeToLog(DataMessage dataMessage, List<DataMessage> logMessages, string fileName)
         {
             if (logMessages == null || !logMessages.Contains(dataMessage))
             {
                 logMessages.Add(dataMessage);
-                updateEventLog(logMessages, currentTime);
+                updateEventLog(logMessages, fileName);
             }
 
         }
@@ -75,9 +75,8 @@ namespace LockConsole
         /// </summary>
         /// <param name="updatedLog">The updated message log list</param>
         /// <param name="currentTime">The current time</param>
-        public static void updateEventLog(List<DataMessage> updatedLog, DateTime currentTime)
+        public static void updateEventLog(List<DataMessage> updatedLog, string fileName)
         {
-            string fileName = currentTime.ToString("d", CultureInfo.CreateSpecificCulture("nl-NL")) + ".json";
             if (!checkIfFileExcists(fileName))
             {
                 if (createLogFile(fileName))
